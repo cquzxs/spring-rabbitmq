@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd       http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+    <context:component-scan base-package="com.zxs.ssh.template.service"/>
+    <!-- 定义RabbitMQ的连接工厂 -->
+    <rabbit:connection-factory id="connectionFactory" host="${rabbit.host}" port="${rabbit.port}"
+                               username="${rabbit.username}" password="${rabbit.password}" virtual-host="${rabbit.virtualhost}"/>
+    <!-- MQ的管理，包括队列、交换器等 -->
+    <rabbit:admin id="connectAdmin" connection-factory="connectionFactory"/>
+    <!-- 定义队列 -->
+    <rabbit:queue id="errorQueue" name="${rabbit.error.queue}" declared-by="connectAdmin"/>
+    <rabbit:queue id="warnQueue" name="${rabbit.warn.queue}" declared-by="connectAdmin"/>
+    <rabbit:queue id="infoQueue" name="${rabbit.info.queue}" declared-by="connectAdmin"/>
+    <!-- 定义交换器，把队列绑定到交换机-->
+    <rabbit:direct-exchange name="${rabbit.direct.exchange}" declared-by="connectAdmin">
+        <rabbit:bindings>
+            <rabbit:binding queue="errorQueue" key="${rabbit.error.queue}"/>
+
+            <rabbit:binding queue="warnQueue" key="${rabbit.error.queue}"/>
+            <rabbit:binding queue="warnQueue" key="${rabbit.warn.queue}"/>
+
+            <rabbit:binding queue="infoQueue" key="${rabbit.error.queue}"/>
+            <rabbit:binding queue="infoQueue" key="${rabbit.warn.queue}"/>
+            <rabbit:binding queue="infoQueue" key="${rabbit.info.queue}"/>
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+    <!-- 定义Rabbit模板，指定连接工厂以及定义exchange -->
+    <rabbit:template id="template" connection-factory="connectionFactory" exchange="${rabbit.direct.exchange}"/>
+    <!-- 队列监听 -->
+    <rabbit:listener-container connection-factory="connectionFactory">
+        <rabbit:listener queues="errorQueue" ref="errorQueueConsumer" />
+        <rabbit:listener queues="warnQueue" ref="warnQueueConsumer" />
+        <rabbit:listener queues="infoQueue" ref="infoQueueConsumer" />
+    </rabbit:listener-container>
+</beans>
